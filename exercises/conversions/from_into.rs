@@ -1,3 +1,5 @@
+use std::error;
+use std::str::FromStr;
 // The From trait is used for value-to-value conversions.
 // If From is implemented correctly for a type, the Into trait should work conversely.
 // You can read more about it at https://doc.rust-lang.org/std/convert/trait.From.html
@@ -35,10 +37,37 @@ impl Default for Person {
 
 // I AM NOT DONE
 
+enum PersonDetails<'a> {
+	Name(&'a str),
+	Age(usize),
+}
+
+impl FromStr for PersonDetails<'_> {
+	type Err = Box<dyn error::Error>;
+
+	fn from_str(s: &str) -> Result<Self, Box<dyn error::Error>>  {
+		let age = s.parse::<usize>()?;
+		Ok(PersonDetails::Age(age))
+			
+	}
+}
 impl From<&str> for Person {
     fn from(s: &str) -> Person {
-    }
-}
+			let input = s.split(',')
+									.enumerate()
+									.map(|val: (usize, &str)| match val { 
+											(0, name) if name.len() > 0 => Ok(PersonDetails::Name(name)),
+											(1, age) => age.parse::<PersonDetails>(),
+											_ => Err("Didn't match".into()),
+										})
+									.collect::<Vec<Result<PersonDetails, Box<dyn error::Error>>>>();
+			match input[..] {
+				[Ok(PersonDetails::Name(name)), Ok(PersonDetails::Age(age))] => Person { name: name.to_string(), age },
+				_ => Person::default()
+		}
+	}
+} 
+
 
 fn main() {
     // Use the `from` function
